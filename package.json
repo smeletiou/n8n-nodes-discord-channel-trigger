@@ -16,13 +16,8 @@
 		"url": "https://github.com/your-username/n8n-nodes-discord-channel-trigger.git"
 	},
 	"scripts": {
-		"build": "n8n-node build",
-		"build:watch": "tsc --watch",
-		"dev": "n8n-node dev",
-		"lint": "n8n-node lint",
-		"lint:fix": "n8n-node lint --fix",
-		"release": "n8n-node release",
-		"prepublishOnly": "n8n-node prerelease"
+		"build": "tsc -p tsconfig.json && node scripts/copy-assets.js",
+		"build:watch": "tsc --watch"
 	},
 	"files": [
 		"dist"
@@ -41,10 +36,6 @@
 		"discord.js": "^14.16.3"
 	},
 	"devDependencies": {
-		"@n8n/node-cli": "*",
-		"eslint": "9.39.4",
-		"prettier": "3.8.3",
-		"release-it": "20.2.0",
 		"typescript": "5.9.3"
 	},
 	"peerDependencies": {
