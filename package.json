@@ -29,7 +29,8 @@
 			"dist/credentials/DiscordBotApi.credentials.js"
 		],
 		"nodes": [
-			"dist/nodes/DiscordChannelTrigger/DiscordChannelTrigger.node.js"
+			"dist/nodes/DiscordChannelTrigger/DiscordChannelTrigger.node.js",
+			"dist/nodes/DiscordSendAndWaitForButton/DiscordSendAndWaitForButton.node.js"
 		]
 	},
 	"dependencies": {

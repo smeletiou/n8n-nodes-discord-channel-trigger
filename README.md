@@ -1,8 +1,71 @@
 # n8n-nodes-discord-channel-trigger
 
-A custom n8n trigger node that starts a workflow whenever your Discord bot sees a **new message in one or more specific channels**.
+Two custom n8n nodes for Discord automation using your own bot:
+
+1. **Discord Channel Trigger** — starts a workflow when your bot sees a new message in a channel or DM
+2. **Discord Send and Wait for Button** — sends a message with real Discord buttons and pauses the workflow until someone actually clicks one
+
+## Discord Channel Trigger
 
 Unlike a polling or webhook-based trigger, this node keeps a persistent connection to Discord's Gateway (via [discord.js](https://discord.js.org/)) using your existing bot's token, and emits a workflow execution for every matching message in real time.
+
+### Configuration
+
+| Parameter | Description |
+|---|---|
+| Trigger On | Message in Channel, or Direct Message to Bot |
+| Server / Channel | Searchable "From List" dropdowns (live from the Discord API) or manual ID entry. Channel mode only. |
+| Ignore Bot Messages | Skip messages authored by bots (default: on) |
+| Only With Content | Skip messages with no text content, e.g. embed/attachment-only (default: off) |
+
+### Output
+
+```json
+{
+  "messageId": "...",
+  "content": "...",
+  "channelId": "...",
+  "guildId": "...",
+  "isDirectMessage": false,
+  "authorId": "...",
+  "authorUsername": "...",
+  "authorBot": false,
+  "attachments": [{ "url": "...", "name": "...", "contentType": "..." }],
+  "createdTimestamp": 1234567890
+}
+```
+
+## Discord Send and Wait for Button
+
+Unlike n8n's built-in "Send and Wait for Response" (which generates an n8n-hosted web form link), this node sends a real Discord message with interactive buttons and waits for an actual `interactionCreate` button click inside Discord itself, using discord.js's `awaitMessageComponent()`.
+
+### Configuration
+
+| Parameter | Description |
+|---|---|
+| Send To | Channel, or Direct Message to a specific user ID |
+| Server / Channel | Same dropdown pattern as the trigger. Channel mode only. |
+| User ID | Discord user ID to DM. The bot can only DM users who share a server with it. |
+| Message Text | The message sent alongside the buttons |
+| Buttons | Up to 5 buttons, each with a label, style (Primary/Secondary/Success/Danger), and optional custom ID |
+| Timeout (Minutes) | How long to wait for a click before giving up (default: 10) |
+| On Timeout | Fail the node, or continue with `timedOut: true` |
+
+Each execution opens its own Gateway connection, sends the message, waits for the click (or timeout), edits the message to remove the buttons, then closes the connection. If you're processing many items at once, this happens sequentially per item — expect roughly 1-3 seconds of connection overhead per item in addition to however long people take to click.
+
+### Output
+
+```json
+{
+  "messageId": "...",
+  "channelId": "...",
+  "timedOut": false,
+  "buttonId": "btn_0",
+  "buttonLabel": "Approve",
+  "respondedBy": { "id": "...", "username": "..." },
+  "respondedAt": 1234567890
+}
+```
 
 ## Requirements
 
@@ -18,44 +81,17 @@ In your n8n instance's custom extensions folder (usually `~/.n8n/custom`, or whe
 npm install n8n-nodes-discord-channel-trigger
 ```
 
-Then restart n8n. The node appears in the node panel as **Discord Channel Trigger**.
+Then restart n8n. Both nodes appear in the node panel by their display names.
 
 ## Credentials
 
 Create a **Discord Bot API** credential in n8n with your bot's token (Developer Portal → your app → Bot → Reset/Copy Token).
 
-## Node configuration
-
-| Parameter | Description |
-|---|---|
-| Channel IDs | Comma-separated Discord channel IDs to listen to. Enable Developer Mode in Discord, right-click a channel, "Copy Channel ID". |
-| Ignore Bot Messages | Skip messages authored by bots (default: on) |
-| Only With Content | Skip messages with no text content, e.g. embed/attachment-only (default: off) |
-
-## Output
-
-Each matching message emits one item shaped like:
-
-```json
-{
-  "messageId": "...",
-  "content": "...",
-  "channelId": "...",
-  "guildId": "...",
-  "authorId": "...",
-  "authorUsername": "...",
-  "authorBot": false,
-  "attachments": [{ "url": "...", "name": "...", "contentType": "..." }],
-  "createdTimestamp": 1234567890
-}
-```
-
 ## Local development
 
 ```bash
-npm install --legacy-peer-deps
+npm install
 npm run build       # compile + copy static files to dist/
-npm run lint         # check n8n community node conventions
 ```
 
 To test against a local n8n instance:
@@ -66,6 +102,8 @@ cd ~/.n8n/custom
 npm link n8n-nodes-discord-channel-trigger
 n8n start
 ```
+
+Or use the included `Dockerfile` / `docker-compose.yml` to build and run inside a container (see comments in those files).
 
 ## Before publishing
 
