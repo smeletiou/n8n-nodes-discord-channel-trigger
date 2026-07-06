@@ -1,4 +1,5 @@
 import type {
+	IAuthenticateGeneric,
 	Icon,
 	ICredentialTestRequest,
 	ICredentialType,
@@ -26,15 +27,22 @@ export class DiscordBotApi implements ICredentialType {
 		},
 	];
 
+	// Attaches the bot token to every request made with this credential,
+	// including the Server/Channel dropdown lookups in the node UI.
+	authenticate: IAuthenticateGeneric = {
+		type: 'generic',
+		properties: {
+			headers: {
+				Authorization: '=Bot {{$credentials.botToken}}',
+			},
+		},
+	};
+
 	// Simple validation call: fetch the bot's own user info with the token.
 	test: ICredentialTestRequest = {
 		request: {
 			baseURL: 'https://discord.com/api/v10',
 			url: '/users/@me',
-			method: 'GET',
-			headers: {
-				Authorization: '=Bot {{$credentials.botToken}}',
-			},
 		},
 	};
 }
