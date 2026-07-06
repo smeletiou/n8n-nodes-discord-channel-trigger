@@ -1,0 +1,21 @@
+services:
+  n8n:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: n8n
+    ports:
+      - "5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=UTC
+      - TZ=UTC
+      # Add back any other env vars your original `docker run` command used
+      # (e.g. N8N_ENCRYPTION_KEY, WEBHOOK_URL, etc.) so nothing resets.
+    volumes:
+      - n8n_data:/home/node/.n8n
+    restart: unless-stopped
+
+volumes:
+  n8n_data:
+    external: true
+    name: n8n_data
