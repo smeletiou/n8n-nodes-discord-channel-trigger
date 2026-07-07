@@ -3,7 +3,7 @@
 Two custom n8n nodes for Discord automation using your own bot:
 
 1. **Discord Channel Trigger** — starts a workflow when your bot sees a new message in a channel or DM
-2. **Discord Send and Wait for Button** — sends a message with real Discord buttons and pauses the workflow until someone actually clicks one
+2. **Discord Send and Wait for Reply** — sends a message and pauses the workflow until someone actually responds in Discord itself, either by clicking a button or by using Discord's native "Reply" feature with free text
 
 ## Discord Channel Trigger
 
@@ -35,9 +35,9 @@ Unlike a polling or webhook-based trigger, this node keeps a persistent connecti
 }
 ```
 
-## Discord Send and Wait for Button
+## Discord Send and Wait for Reply
 
-Unlike n8n's built-in "Send and Wait for Response" (which generates an n8n-hosted web form link), this node sends a real Discord message with interactive buttons and waits for an actual `interactionCreate` button click inside Discord itself, using discord.js's `awaitMessageComponent()`.
+Unlike n8n's built-in "Send and Wait for Response" (which generates an n8n-hosted web form link), this node waits for an actual Discord-native response -- a real `interactionCreate` button click, or a real text message sent using Discord's "Reply" feature (the reply arrow/swipe-to-reply, which attaches `message.reference` pointing back at the bot's message).
 
 ### Configuration
 
@@ -46,24 +46,46 @@ Unlike n8n's built-in "Send and Wait for Response" (which generates an n8n-hoste
 | Send To | Channel, or Direct Message to a specific user ID |
 | Server / Channel | Same dropdown pattern as the trigger. Channel mode only. |
 | User ID | Discord user ID to DM. The bot can only DM users who share a server with it. |
-| Message Text | The message sent alongside the buttons |
-| Buttons | Up to 5 buttons, each with a label, style (Primary/Secondary/Success/Danger), and optional custom ID |
-| Timeout (Minutes) | How long to wait for a click before giving up (default: 10) |
+| Message Text | The message sent |
+| Response Type | **Buttons** (up to 5, each with label/style/optional custom ID) or **Text Reply** (waits for a Discord "Reply" to this message) |
+| Timeout (Minutes) | How long to wait for a response before giving up (default: 10) |
 | On Timeout | Fail the node, or continue with `timedOut: true` |
 
-Each execution opens its own Gateway connection, sends the message, waits for the click (or timeout), edits the message to remove the buttons, then closes the connection. If you're processing many items at once, this happens sequentially per item — expect roughly 1-3 seconds of connection overhead per item in addition to however long people take to click.
+Each execution opens its own Gateway connection, sends the message, waits for the response (or timeout), then closes the connection. If you're processing many items at once, this happens sequentially per item -- expect roughly 1-3 seconds of connection overhead per item in addition to however long people take to respond.
+
+**Buttons mode** edits the message to show the selection and removes the buttons once clicked.
+**Text Reply mode** reacts with ✅ on the reply it captured, and only matches messages that used Discord's actual Reply feature on the bot's message -- not just any message sent afterward -- so it works correctly even in busy channels with unrelated chatter.
 
 ### Output
+
+Buttons mode:
 
 ```json
 {
   "messageId": "...",
   "channelId": "...",
   "timedOut": false,
+  "responseType": "buttons",
   "buttonId": "btn_0",
   "buttonLabel": "Approve",
   "respondedBy": { "id": "...", "username": "..." },
   "respondedAt": 1234567890
+}
+```
+
+Text Reply mode:
+
+```json
+{
+  "messageId": "...",
+  "channelId": "...",
+  "timedOut": false,
+  "responseType": "textReply",
+  "replyContent": "Sounds good, let's do option 2",
+  "replyMessageId": "...",
+  "respondedBy": { "id": "...", "username": "..." },
+  "respondedAt": 1234567890,
+  "attachments": [{ "url": "...", "name": "...", "contentType": "..." }]
 }
 ```
 

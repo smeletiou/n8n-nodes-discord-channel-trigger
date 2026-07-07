@@ -17,6 +17,7 @@ import {
 	Partials,
 	TextChannel,
 	DMChannel,
+	Message,
 } from 'discord.js';
 
 interface DiscordGuild {
@@ -39,18 +40,18 @@ interface ButtonDefinition {
 const TEXT_CHANNEL_TYPES = [0, 5, 15];
 const MAX_BUTTONS = 5; // Discord's per-row limit
 
-export class DiscordSendAndWaitForButton implements INodeType {
+export class DiscordSendAndWaitForReply implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'Discord Send and Wait for Button',
-		name: 'discordSendAndWaitForButton',
+		displayName: 'Discord Send and Wait for Reply',
+		name: 'discordSendAndWaitForReply',
 		icon: 'file:discord.svg',
 		group: ['transform'],
 		version: 1,
-		subtitle: '={{$parameter["sendTo"]}}',
+		subtitle: '={{$parameter["responseType"]}}',
 		description:
-			'Sends a Discord message with real buttons and pauses until someone actually clicks one in Discord',
+			'Sends a Discord message and pauses until someone actually responds in Discord itself -- by clicking a button, or by replying with text',
 		defaults: {
-			name: 'Discord Send and Wait for Button',
+			name: 'Discord Send and Wait for Reply',
 		},
 		usableAsTool: true,
 		inputs: [NodeConnectionTypes.Main],
@@ -151,7 +152,26 @@ export class DiscordSendAndWaitForButton implements INodeType {
 				typeOptions: { rows: 4 },
 				default: '',
 				required: true,
-				description: 'The message to send along with the buttons',
+				description: 'The message to send',
+			},
+			{
+				displayName: 'Response Type',
+				name: 'responseType',
+				type: 'options',
+				options: [
+					{
+						name: 'Buttons (Fixed Choices)',
+						value: 'buttons',
+						description: 'Attach up to 5 buttons; waits for a click',
+					},
+					{
+						name: 'Text Reply',
+						value: 'textReply',
+						description:
+							'Waits for someone to use Discord\'s "Reply" on this message with free-form text',
+					},
+				],
+				default: 'buttons',
 			},
 			{
 				displayName: 'Buttons',
@@ -159,6 +179,7 @@ export class DiscordSendAndWaitForButton implements INodeType {
 				type: 'fixedCollection',
 				typeOptions: { multipleValues: true },
 				placeholder: 'Add Button',
+				displayOptions: { show: { responseType: ['buttons'] } },
 				default: {
 					button: [
 						{ label: 'Approve', style: 'Success', customId: '' },
@@ -207,7 +228,7 @@ export class DiscordSendAndWaitForButton implements INodeType {
 				name: 'timeoutMinutes',
 				type: 'number',
 				default: 10,
-				description: 'How long to wait for a button click before giving up',
+				description: 'How long to wait for a response before giving up',
 			},
 			{
 				displayName: 'On Timeout',
@@ -277,14 +298,19 @@ export class DiscordSendAndWaitForButton implements INodeType {
 		for (let i = 0; i < items.length; i++) {
 			const sendTo = this.getNodeParameter('sendTo', i) as 'channel' | 'directMessage';
 			const messageText = this.getNodeParameter('messageText', i) as string;
-			const buttonDefs = (
-				(this.getNodeParameter('buttons', i, {}) as { button?: ButtonDefinition[] }).button ?? []
-			).slice(0, MAX_BUTTONS);
+			const responseType = this.getNodeParameter('responseType', i) as 'buttons' | 'textReply';
 			const timeoutMinutes = this.getNodeParameter('timeoutMinutes', i) as number;
 			const onTimeout = this.getNodeParameter('onTimeout', i) as 'fail' | 'continue';
 
-			if (buttonDefs.length === 0) {
-				throw new NodeOperationError(this.getNode(), 'Add at least one button', { itemIndex: i });
+			let buttonDefs: ButtonDefinition[] = [];
+			if (responseType === 'buttons') {
+				buttonDefs = (
+					(this.getNodeParameter('buttons', i, {}) as { button?: ButtonDefinition[] }).button ?? []
+				).slice(0, MAX_BUTTONS);
+
+				if (buttonDefs.length === 0) {
+					throw new NodeOperationError(this.getNode(), 'Add at least one button', { itemIndex: i });
+				}
 			}
 
 			let channelId = '';
@@ -296,8 +322,13 @@ export class DiscordSendAndWaitForButton implements INodeType {
 			}
 
 			const client = new Client({
-				intents: [GatewayIntentBits.Guilds, GatewayIntentBits.DirectMessages],
-				partials: [Partials.Channel],
+				intents: [
+					GatewayIntentBits.Guilds,
+					GatewayIntentBits.GuildMessages,
+					GatewayIntentBits.DirectMessages,
+					GatewayIntentBits.MessageContent,
+				],
+				partials: [Partials.Channel, Partials.Message],
 			});
 
 			try {
@@ -317,56 +348,105 @@ export class DiscordSendAndWaitForButton implements INodeType {
 
 				const idFor = (b: ButtonDefinition, idx: number) => b.customId || `btn_${idx}`;
 
-				const row = new ActionRowBuilder<ButtonBuilder>().addComponents(
-					buttonDefs.map((b, idx) =>
-						new ButtonBuilder()
-							.setCustomId(idFor(b, idx))
-							.setLabel(b.label)
-							.setStyle(ButtonStyle[b.style]),
-					),
-				);
+				const components =
+					responseType === 'buttons'
+						? [
+								new ActionRowBuilder<ButtonBuilder>().addComponents(
+									buttonDefs.map((b, idx) =>
+										new ButtonBuilder()
+											.setCustomId(idFor(b, idx))
+											.setLabel(b.label)
+											.setStyle(ButtonStyle[b.style]),
+									),
+								),
+							]
+						: [];
 
-				const sentMessage = await targetChannel.send({ content: messageText, components: [row] });
+				const sentMessage = await targetChannel.send({ content: messageText, components });
 
 				let resultJson: Record<string, unknown>;
-				try {
-					const interaction = await sentMessage.awaitMessageComponent({
-						componentType: ComponentType.Button,
-						time: timeoutMinutes * 60 * 1000,
-					});
 
-					const clickedButton = buttonDefs.find(
-						(b, idx) => idFor(b, idx) === interaction.customId,
-					);
+				if (responseType === 'buttons') {
+					try {
+						const interaction = await sentMessage.awaitMessageComponent({
+							componentType: ComponentType.Button,
+							time: timeoutMinutes * 60 * 1000,
+						});
 
-					await interaction.update({
-						content: `${messageText}\n\n_Selected: **${clickedButton?.label ?? interaction.customId}**_`,
-						components: [],
-					});
-
-					resultJson = {
-						timedOut: false,
-						buttonId: interaction.customId,
-						buttonLabel: clickedButton?.label,
-						respondedBy: {
-							id: interaction.user.id,
-							username: interaction.user.username,
-						},
-						respondedAt: Date.now(),
-					};
-				} catch {
-					// awaitMessageComponent rejects on timeout
-					if (onTimeout === 'fail') {
-						throw new NodeOperationError(
-							this.getNode(),
-							'Timed out waiting for a button response',
-							{ itemIndex: i },
+						const clickedButton = buttonDefs.find(
+							(b, idx) => idFor(b, idx) === interaction.customId,
 						);
+
+						await interaction.update({
+							content: `${messageText}\n\n_Selected: **${clickedButton?.label ?? interaction.customId}**_`,
+							components: [],
+						});
+
+						resultJson = {
+							timedOut: false,
+							responseType: 'buttons',
+							buttonId: interaction.customId,
+							buttonLabel: clickedButton?.label,
+							respondedBy: {
+								id: interaction.user.id,
+								username: interaction.user.username,
+							},
+							respondedAt: Date.now(),
+						};
+					} catch {
+						if (onTimeout === 'fail') {
+							throw new NodeOperationError(
+								this.getNode(),
+								'Timed out waiting for a button response',
+								{ itemIndex: i },
+							);
+						}
+						resultJson = { timedOut: true, responseType: 'buttons' };
+						await sentMessage
+							.edit({ content: `${messageText}\n\n_No response received in time._`, components: [] })
+							.catch(() => {});
 					}
-					resultJson = { timedOut: true };
-					await sentMessage
-						.edit({ content: `${messageText}\n\n_No response received in time._`, components: [] })
-						.catch(() => {});
+				} else {
+					try {
+						const collected = await targetChannel.awaitMessages({
+							filter: (m: Message) => m.reference?.messageId === sentMessage.id,
+							max: 1,
+							time: timeoutMinutes * 60 * 1000,
+							errors: ['time'],
+						});
+						const replyMessage = collected.first()!;
+
+						resultJson = {
+							timedOut: false,
+							responseType: 'textReply',
+							replyContent: replyMessage.content,
+							replyMessageId: replyMessage.id,
+							respondedBy: {
+								id: replyMessage.author.id,
+								username: replyMessage.author.username,
+							},
+							respondedAt: replyMessage.createdTimestamp,
+							attachments: replyMessage.attachments.map((a) => ({
+								url: a.url,
+								name: a.name,
+								contentType: a.contentType,
+							})),
+						};
+
+						await replyMessage.react('✅').catch(() => {});
+					} catch {
+						if (onTimeout === 'fail') {
+							throw new NodeOperationError(
+								this.getNode(),
+								'Timed out waiting for a text reply',
+								{ itemIndex: i },
+							);
+						}
+						resultJson = { timedOut: true, responseType: 'textReply' };
+						await sentMessage
+							.edit({ content: `${messageText}\n\n_No reply received in time._` })
+							.catch(() => {});
+					}
 				}
 
 				returnData.push({

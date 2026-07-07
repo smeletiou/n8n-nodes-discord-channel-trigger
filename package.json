@@ -30,7 +30,7 @@
 		],
 		"nodes": [
 			"dist/nodes/DiscordChannelTrigger/DiscordChannelTrigger.node.js",
-			"dist/nodes/DiscordSendAndWaitForButton/DiscordSendAndWaitForButton.node.js"
+			"dist/nodes/DiscordSendAndWaitForReply/DiscordSendAndWaitForReply.node.js"
 		]
 	},
 	"dependencies": {
