@@ -224,6 +224,25 @@ export class DiscordSendAndWaitForReply implements INodeType {
 				],
 			},
 			{
+				displayName: 'Require Explicit Discord Reply',
+				name: 'requireExplicitReply',
+				type: 'boolean',
+				default: false,
+				displayOptions: { show: { responseType: ['textReply'] } },
+				description:
+					'Whether the response must use Discord\'s "Reply" feature on this exact message. If off (default), the next matching message anywhere in the channel counts, whether or not Reply was used.',
+			},
+			{
+				displayName: 'Restrict To User ID',
+				name: 'expectedUserId',
+				type: 'string',
+				default: '',
+				displayOptions: { show: { responseType: ['textReply'], sendTo: ['channel'] } },
+				placeholder: 'e.g. 123456789012345678',
+				description:
+					'Optional. If set, only a message from this Discord user ID will be captured. Leave blank to accept the next message from anyone in the channel (recommended for DMs, this is automatic).',
+			},
+			{
 				displayName: 'Timeout (Minutes)',
 				name: 'timeoutMinutes',
 				type: 'number',
@@ -303,6 +322,8 @@ export class DiscordSendAndWaitForReply implements INodeType {
 			const onTimeout = this.getNodeParameter('onTimeout', i) as 'fail' | 'continue';
 
 			let buttonDefs: ButtonDefinition[] = [];
+			let requireExplicitReply = false;
+			let expectedUserId = '';
 			if (responseType === 'buttons') {
 				buttonDefs = (
 					(this.getNodeParameter('buttons', i, {}) as { button?: ButtonDefinition[] }).button ?? []
@@ -311,14 +332,22 @@ export class DiscordSendAndWaitForReply implements INodeType {
 				if (buttonDefs.length === 0) {
 					throw new NodeOperationError(this.getNode(), 'Add at least one button', { itemIndex: i });
 				}
+			} else {
+				requireExplicitReply = this.getNodeParameter('requireExplicitReply', i, false) as boolean;
 			}
 
 			let channelId = '';
 			let userId = '';
 			if (sendTo === 'channel') {
 				channelId = this.getNodeParameter('channel', i, undefined, { extractValue: true }) as string;
+				if (responseType === 'textReply') {
+					expectedUserId = this.getNodeParameter('expectedUserId', i, '') as string;
+				}
 			} else {
 				userId = this.getNodeParameter('userId', i) as string;
+				if (responseType === 'textReply') {
+					expectedUserId = userId; // DMs are inherently 1:1 with this user
+				}
 			}
 
 			const client = new Client({
@@ -409,7 +438,12 @@ export class DiscordSendAndWaitForReply implements INodeType {
 				} else {
 					try {
 						const collected = await targetChannel.awaitMessages({
-							filter: (m: Message) => m.reference?.messageId === sentMessage.id,
+							filter: (m: Message) => {
+								if (m.author.bot) return false;
+								if (expectedUserId && m.author.id !== expectedUserId) return false;
+								if (requireExplicitReply && m.reference?.messageId !== sentMessage.id) return false;
+								return true;
+							},
 							max: 1,
 							time: timeoutMinutes * 60 * 1000,
 							errors: ['time'],
@@ -421,6 +455,7 @@ export class DiscordSendAndWaitForReply implements INodeType {
 							responseType: 'textReply',
 							replyContent: replyMessage.content,
 							replyMessageId: replyMessage.id,
+							wasExplicitReply: replyMessage.reference?.messageId === sentMessage.id,
 							respondedBy: {
 								id: replyMessage.author.id,
 								username: replyMessage.author.username,

@@ -47,14 +47,16 @@ Unlike n8n's built-in "Send and Wait for Response" (which generates an n8n-hoste
 | Server / Channel | Same dropdown pattern as the trigger. Channel mode only. |
 | User ID | Discord user ID to DM. The bot can only DM users who share a server with it. |
 | Message Text | The message sent |
-| Response Type | **Buttons** (up to 5, each with label/style/optional custom ID) or **Text Reply** (waits for a Discord "Reply" to this message) |
+| Response Type | **Buttons** (up to 5, each with label/style/optional custom ID) or **Text Reply** (waits for the next matching message in the channel) |
+| Require Explicit Discord Reply | Text Reply mode only. Off by default -- any next qualifying message counts, whether or not Discord's Reply feature was used. Turn on to require an actual Reply (matched via `message.reference`). |
+| Restrict To User ID | Text Reply mode, Channel send-to only. Optional -- if set, only that user's message is captured. Automatic for DMs (there's only one possible sender). Leave blank in a channel to accept the next message from anyone. |
 | Timeout (Minutes) | How long to wait for a response before giving up (default: 10) |
 | On Timeout | Fail the node, or continue with `timedOut: true` |
 
 Each execution opens its own Gateway connection, sends the message, waits for the response (or timeout), then closes the connection. If you're processing many items at once, this happens sequentially per item -- expect roughly 1-3 seconds of connection overhead per item in addition to however long people take to respond.
 
 **Buttons mode** edits the message to show the selection and removes the buttons once clicked.
-**Text Reply mode** reacts with ✅ on the reply it captured, and only matches messages that used Discord's actual Reply feature on the bot's message -- not just any message sent afterward -- so it works correctly even in busy channels with unrelated chatter.
+**Text Reply mode** reacts with ✅ on the message it captured. By default it captures the very next non-bot message posted in the channel/DM (optionally restricted to one user ID) -- it does **not** require Discord's Reply feature unless you turn "Require Explicit Discord Reply" on.
 
 ### Output
 
@@ -83,6 +85,7 @@ Text Reply mode:
   "responseType": "textReply",
   "replyContent": "Sounds good, let's do option 2",
   "replyMessageId": "...",
+  "wasExplicitReply": false,
   "respondedBy": { "id": "...", "username": "..." },
   "respondedAt": 1234567890,
   "attachments": [{ "url": "...", "name": "...", "contentType": "..." }]
