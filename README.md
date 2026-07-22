@@ -130,12 +130,6 @@ n8n start
 
 Or use the included `Dockerfile` / `docker-compose.yml` to build and run inside a container (see comments in those files).
 
-## Before publishing
-
-- [ ] Update `author.name` / `author.email` in `package.json`
-- [ ] Update the `repository.url` in `package.json` to your actual GitHub repo
-- [ ] Bump `version` following semver on each release
-
 ## License
 
 MIT
