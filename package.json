@@ -1,19 +1,19 @@
 {
 	"name": "n8n-nodes-discord-channel-trigger",
 	"version": "0.1.0",
-	"description": "n8n trigger node that fires when your Discord bot sees a new message in specific channels",
+	"description": "n8n trigger node that fires when your Discord bot sees a new message in specific channels or direct message",
 	"license": "MIT",
 	"homepage": "",
 	"keywords": [
 		"n8n-community-node-package"
 	],
 	"author": {
-		"name": "Your Name",
-		"email": "you@example.com"
+		"name": "Sotiris R. Meletiou",
+		"email": "soto.mele.dev@gmail.com"
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/your-username/n8n-nodes-discord-channel-trigger.git"
+		"url": "https://github.com/smeletiou/n8n-nodes-discord-channel-trigger.git"
 	},
 	"scripts": {
 		"build": "tsc -p tsconfig.json && node scripts/copy-assets.js",
