@@ -1,3 +1,4 @@
+// Author: Sotiris R. Meletiou (@smeletiou) - https://github.com/smeletiou
 import type {
 	IAuthenticateGeneric,
 	Icon,

@@ -1,3 +1,4 @@
+// Author: Sotiris R. Meletiou (@smeletiou) - https://github.com/smeletiou
 import type {
 	IExecuteFunctions,
 	ILoadOptionsFunctions,
@@ -369,7 +370,15 @@ export class DiscordSendAndWaitForReply implements INodeType {
 
 				let targetChannel: TextChannel | DMChannel;
 				if (sendTo === 'channel') {
-					targetChannel = (await client.channels.fetch(channelId)) as TextChannel;
+					const fetchedChannel = await client.channels.fetch(channelId);
+					if (!fetchedChannel?.isTextBased() || fetchedChannel.isVoiceBased()) {
+						throw new NodeOperationError(
+							this.getNode(),
+							`Channel ${channelId} is not a text channel the bot can send messages to`,
+							{ itemIndex: i },
+						);
+					}
+					targetChannel = fetchedChannel as TextChannel;
 				} else {
 					const user = await client.users.fetch(userId);
 					targetChannel = await user.createDM();
@@ -490,6 +499,7 @@ export class DiscordSendAndWaitForReply implements INodeType {
 						channelId: sentMessage.channelId,
 						...resultJson,
 					},
+					pairedItem: { item: i },
 				});
 			} finally {
 				await client.destroy();

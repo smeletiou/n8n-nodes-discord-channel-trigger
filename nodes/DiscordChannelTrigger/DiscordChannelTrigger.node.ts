@@ -1,3 +1,4 @@
+// Author: Sotiris R. Meletiou (@smeletiou) - https://github.com/smeletiou
 import type {
 	ITriggerFunctions,
 	ILoadOptionsFunctions,
@@ -36,7 +37,6 @@ export class DiscordChannelTrigger implements INodeType {
 		defaults: {
 			name: 'Discord Channel Trigger',
 		},
-		usableAsTool: true,
 		inputs: [],
 		outputs: [NodeConnectionTypes.Main],
 		credentials: [

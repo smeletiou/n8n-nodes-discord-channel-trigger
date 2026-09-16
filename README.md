@@ -1,9 +1,22 @@
 # n8n-nodes-discord-channel-trigger
 
-Two custom n8n nodes for Discord automation using your own bot:
+Two custom n8n nodes for Discord automation using your own bot — no polling, no webhooks, no leaving Discord to approve something.
 
-1. **Discord Channel Trigger** — starts a workflow when your bot sees a new message in a channel or DM
-2. **Discord Send and Wait for Reply** — sends a message and pauses the workflow until someone actually responds in Discord itself, either by clicking a button or by using Discord's native "Reply" feature with free text
+1. **Discord Channel Trigger** — starts a workflow the instant your bot sees a new message in a channel or DM
+2. **Discord Send and Wait for Reply** — sends a message and pauses the workflow until someone actually responds *in Discord itself*, either by clicking a button or by replying with free text
+
+n8n's official Discord node has no trigger for incoming messages, and its built-in "Send and Wait for Response" free-text option sends people to an n8n-hosted web form outside Discord. These two nodes fill both gaps using a real, persistent bot connection to Discord's Gateway.
+
+## Table of Contents
+
+- [Discord Channel Trigger](#discord-channel-trigger)
+- [Discord Send and Wait for Reply](#discord-send-and-wait-for-reply)
+- [Requirements](#requirements)
+- [Install](#install)
+- [Credentials](#credentials)
+- [Local Development](#local-development)
+- [Author](#author)
+- [License](#license)
 
 ## Discord Channel Trigger
 
@@ -37,7 +50,7 @@ Unlike a polling or webhook-based trigger, this node keeps a persistent connecti
 
 ## Discord Send and Wait for Reply
 
-Unlike n8n's built-in "Send and Wait for Response" (which generates an n8n-hosted web form link), this node waits for an actual Discord-native response -- a real `interactionCreate` button click, or a real text message sent using Discord's "Reply" feature (the reply arrow/swipe-to-reply, which attaches `message.reference` pointing back at the bot's message).
+Unlike n8n's built-in "Send and Wait for Response" (which generates an n8n-hosted web form link), this node waits for an actual Discord-native response — a real `interactionCreate` button click, or a real text message sent using Discord's "Reply" feature (the reply arrow/swipe-to-reply, which attaches `message.reference` pointing back at the bot's message).
 
 ### Configuration
 
@@ -48,15 +61,15 @@ Unlike n8n's built-in "Send and Wait for Response" (which generates an n8n-hoste
 | User ID | Discord user ID to DM. The bot can only DM users who share a server with it. |
 | Message Text | The message sent |
 | Response Type | **Buttons** (up to 5, each with label/style/optional custom ID) or **Text Reply** (waits for the next matching message in the channel) |
-| Require Explicit Discord Reply | Text Reply mode only. Off by default -- any next qualifying message counts, whether or not Discord's Reply feature was used. Turn on to require an actual Reply (matched via `message.reference`). |
-| Restrict To User ID | Text Reply mode, Channel send-to only. Optional -- if set, only that user's message is captured. Automatic for DMs (there's only one possible sender). Leave blank in a channel to accept the next message from anyone. |
+| Require Explicit Discord Reply | Text Reply mode only. Off by default — any next qualifying message counts, whether or not Discord's Reply feature was used. Turn on to require an actual Reply (matched via `message.reference`). |
+| Restrict To User ID | Text Reply mode, Channel send-to only. Optional — if set, only that user's message is captured. Automatic for DMs (there's only one possible sender). Leave blank in a channel to accept the next message from anyone. |
 | Timeout (Minutes) | How long to wait for a response before giving up (default: 10) |
 | On Timeout | Fail the node, or continue with `timedOut: true` |
 
-Each execution opens its own Gateway connection, sends the message, waits for the response (or timeout), then closes the connection. If you're processing many items at once, this happens sequentially per item -- expect roughly 1-3 seconds of connection overhead per item in addition to however long people take to respond.
+Each execution opens its own Gateway connection, sends the message, waits for the response (or timeout), then closes the connection. If you're processing many items at once, this happens sequentially per item — expect roughly 1–3 seconds of connection overhead per item in addition to however long people take to respond.
 
 **Buttons mode** edits the message to show the selection and removes the buttons once clicked.
-**Text Reply mode** reacts with ✅ on the message it captured. By default it captures the very next non-bot message posted in the channel/DM (optionally restricted to one user ID) -- it does **not** require Discord's Reply feature unless you turn "Require Explicit Discord Reply" on.
+**Text Reply mode** reacts with ✅ on the message it captured. By default it captures the very next non-bot message posted in the channel/DM (optionally restricted to one user ID) — it does **not** require Discord's Reply feature unless you turn "Require Explicit Discord Reply" on.
 
 ### Output
 
@@ -100,23 +113,36 @@ Text Reply mode:
 
 ## Install
 
+### Option A — n8n's built-in Community Nodes installer (recommended)
+
+In your n8n instance: **Settings → Community Nodes → Install**, then enter:
+
+```
+n8n-nodes-discord-channel-trigger
+```
+
+n8n installs it and restarts automatically. Both nodes then appear in the node panel by their display names.
+
+### Option B — manual install
+
 In your n8n instance's custom extensions folder (usually `~/.n8n/custom`, or wherever `N8N_CUSTOM_EXTENSIONS` points):
 
 ```bash
 npm install n8n-nodes-discord-channel-trigger
 ```
 
-Then restart n8n. Both nodes appear in the node panel by their display names.
+Then restart n8n.
 
 ## Credentials
 
 Create a **Discord Bot API** credential in n8n with your bot's token (Developer Portal → your app → Bot → Reset/Copy Token).
 
-## Local development
+## Local Development
 
 ```bash
 npm install
 npm run build       # compile + copy static files to dist/
+npm run lint         # n8n community-node lint rules
 ```
 
 To test against a local n8n instance:
@@ -130,6 +156,16 @@ n8n start
 
 Or use the included `Dockerfile` / `docker-compose.yml` to build and run inside a container (see comments in those files).
 
+## Author
+
+Built and maintained by **Sotiris R. Meletiou**.
+
+- GitHub: [@smeletiou](https://github.com/smeletiou)
+- LinkedIn: [sotiris-meletiou](https://www.linkedin.com/in/sotiris-meletiou/)
+- Portfolio: [smeletiou.github.io](https://smeletiou.github.io)
+
+Found a bug or want a feature? Open an issue on [GitHub](https://github.com/smeletiou/n8n-nodes-discord-channel-trigger/issues) — PRs welcome.
+
 ## License
 
-MIT
+MIT © Sotiris R. Meletiou — see [LICENSE.md](LICENSE.md)
