@@ -1,5 +1,9 @@
 # n8n-nodes-discord-channel-trigger
 
+[![npm version](https://img.shields.io/npm/v/n8n-nodes-discord-channel-trigger.svg)](https://www.npmjs.com/package/n8n-nodes-discord-channel-trigger)
+[![npm downloads](https://img.shields.io/npm/dm/n8n-nodes-discord-channel-trigger.svg)](https://www.npmjs.com/package/n8n-nodes-discord-channel-trigger)
+[![license](https://img.shields.io/npm/l/n8n-nodes-discord-channel-trigger.svg)](LICENSE.md)
+
 Two custom n8n nodes for Discord automation using your own bot — no polling, no webhooks, no leaving Discord to approve something.
 
 1. **Discord Channel Trigger** — starts a workflow the instant your bot sees a new message in a channel or DM
