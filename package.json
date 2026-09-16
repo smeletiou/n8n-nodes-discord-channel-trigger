@@ -27,6 +27,9 @@
 		"lint": "n8n-node lint",
 		"release": "n8n-node release"
 	},
+	"publishConfig": {
+		"access": "public"
+	},
 	"files": [
 		"dist"
 	],
