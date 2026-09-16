@@ -1,6 +1,6 @@
 {
 	"name": "n8n-nodes-discord-channel-trigger",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "n8n trigger node that fires when your Discord bot sees a new message in specific channels or direct message",
 	"license": "MIT",
 	"homepage": "https://github.com/smeletiou/n8n-nodes-discord-channel-trigger#readme",
