@@ -73,6 +73,8 @@ jobs:
       id-token: write
       # Scoped down from the default (write) for least-privilege publishing.
       contents: read
+      # Required to publish to GitHub Packages.
+      packages: write
 
     steps:
       - uses: actions/checkout@v4
@@ -99,3 +101,20 @@ jobs:
         run: npm run release
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Set up Node.js for GitHub Packages
+        uses: actions/setup-node@v4
+        with:
+          node-version: 'lts/*'
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@${{ github.repository_owner }}'
+
+      - name: Publish to GitHub Packages
+        # GitHub Packages only accepts scoped package names (@owner/name), so the
+        # already-published npm name is temporarily overridden just for this
+        # publish. dist/ from the Release step above is reused, not rebuilt.
+        run: |
+          npm pkg set name="@${{ github.repository_owner }}/n8n-nodes-discord-channel-trigger"
+          npm publish
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
